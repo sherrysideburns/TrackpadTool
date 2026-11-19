@@ -5,6 +5,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSPo
     private var statusItem: NSStatusItem!
     private var settingsWindow: NSWindow?
     private var welcomeWindow: NSWindow?
+    private var reportWindow: NSWindow?
     private var retryTimer: Timer?
     private let popover = NSPopover()
     private let status = StatusWatcher.shared
@@ -61,6 +62,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSPo
         } else if !AX.isTrusted {
             openSettings()
         }
+
+        // After a crash or freeze, offer once to send a report.
+        if Log.previousSessionEndedUnexpectedly && !SettingsStore.shared.isFirstLaunch {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in self?.offerReportAfterCrash() }
+        }
+    }
+
+    private func offerReportAfterCrash() {
+        let alert = NSAlert()
+        alert.messageText = "TrackpadTool stopped unexpectedly last time"
+        alert.informativeText = "That can be a crash, a freeze or Force Quit. Would you like to send a short report so it can be fixed? You'll see it before anything is sent."
+        alert.addButton(withTitle: "Report…")
+        alert.addButton(withTitle: "Not now")
+        NSApp.activate(ignoringOtherApps: true)
+        if alert.runModal() == .alertFirstButtonReturn { showReport() }
+    }
+
+    /// The "Report a problem" window.
+    func showReport() {
+        if reportWindow == nil {
+            let view = ReportView { [weak self] in
+                self?.reportWindow?.close()
+                self?.reportWindow = nil
+            }
+            let window = NSWindow(contentViewController: NSHostingController(rootView: view))
+            window.styleMask = [.titled, .closable]
+            window.title = "Report a problem"
+            window.isReleasedWhenClosed = false
+            window.center()
+            reportWindow = window
+        }
+        Log.breadcrumb("Opened Report a problem")
+        NSApp.activate(ignoringOtherApps: true)
+        reportWindow?.makeKeyAndOrderFront(nil)
     }
 
     /// The first-launch window: Accessibility, then how to start.

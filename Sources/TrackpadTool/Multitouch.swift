@@ -81,6 +81,7 @@ final class MultitouchReader {
     private var listedCount = 0
     private var lastLoggedCount = -1
     private(set) var isRunning = false
+    var deviceCount: Int { devices.count }
     /// Listening was asked for (even if no trackpad is connected yet).
     private var wanted = false
     private var lastDeviceCheck: TimeInterval = 0

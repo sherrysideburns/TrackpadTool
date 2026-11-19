@@ -31,7 +31,7 @@ struct MenuBarPanel: View {
                     Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
                     Text("Stopped unexpectedly last time").font(.system(size: 12))
                     Spacer()
-                    Button("Show log") { NSWorkspace.shared.open(Log.fileURL, configuration: NSWorkspace.OpenConfiguration(), completionHandler: nil) }
+                    Button("Report…") { (NSApp.delegate as? AppDelegate)?.showReport() }
                         .controlSize(.small)
                     Button {
                         ui.crashNoticeDismissed = true

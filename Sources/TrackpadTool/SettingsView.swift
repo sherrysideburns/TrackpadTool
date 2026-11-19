@@ -660,6 +660,8 @@ struct GeneralPane: View {
                             Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
                             Text("TrackpadTool stopped unexpectedly last time (a crash, a freeze or Force Quit). The log has the details.")
                                 .font(.callout)
+                            Spacer()
+                            Button("Report…") { (NSApp.delegate as? AppDelegate)?.showReport() }
                         }
                     }
                     HStack {
@@ -684,6 +686,7 @@ struct GeneralPane: View {
                     LabeledContent("Source code and updates") {
                         Link("GitHub", destination: AppInfo.website)
                     }
+                    Button("Report a problem…") { (NSApp.delegate as? AppDelegate)?.showReport() }
                     Button("Show welcome screen again") { (NSApp.delegate as? AppDelegate)?.showWelcome() }
                     Button("Quit TrackpadTool") { NSApp.terminate(nil) }
                 } header: {

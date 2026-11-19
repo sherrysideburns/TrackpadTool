@@ -26,7 +26,7 @@ TrackpadTool needs macOS 13 Ventura or newer and a trackpad.
 
 ## Privacy
 
-TrackpadTool works entirely on your Mac and sends nothing anywhere. It reads finger positions on the trackpad, not what you type or what's on screen. Its error log (`~/Library/Logs/TrackpadTool`) only records errors, crashes and freezes, and stays on your Mac unless you share it.
+TrackpadTool works entirely on your Mac and sends nothing anywhere. It reads finger positions on the trackpad, not what you type or what's on screen. Its error log (`~/Library/Logs/TrackpadTool`) only records errors, crashes and freezes, and stays on your Mac unless you share it. **Report a problem…** (Settings › General) shows you the whole report before you send it yourself, by email or as a GitHub issue; your name, your Mac's name and your home folder are taken out.
 
 ## Build it yourself
 

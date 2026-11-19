@@ -3,6 +3,10 @@
 All notable changes to TrackpadTool, newest first.
 Versions follow [semantic versioning](https://semver.org) from 1.0.0 on: 1.0.1 is a fix, 1.1.0 adds features.
 
+## 0.13 — 2026-11-19
+- **Report a problem:** new window (Settings › General › About, or from the "stopped unexpectedly" notice) to describe what went wrong and send a report by email or as a GitHub issue, or copy or save it. It holds the TrackpadTool and macOS version, Mac model, modules that are on and the last error-log lines; your name, your Mac's name and your home folder are taken out, and your settings are only included if you tick the box. "See exactly what's sent" shows the whole report first.
+- **After a crash:** when TrackpadTool stopped unexpectedly last time, it asks once whether you want to send a report.
+
 ## 0.12 — 2026-11-19
 - **Welcome:** a welcome window on first launch explains what TrackpadTool does, walks you through the Accessibility permission, and lets you choose the Windows-style setup or start empty. Settings › General › About can show it again (without touching your setup).
 - **Advanced mode:** Middle click is now a normal module and action; Force press (gestures, module and its settings on General) moved to Advanced mode. A force press you already use keeps working and stays visible.
