@@ -1,0 +1,142 @@
+name: Release
+
+# Builds TrackpadTool.app on a GitHub Mac, signs it, checks it for personal
+# details and publishes it.
+#
+# - Push a tag like v1.0.0  → a GitHub Release with TrackpadTool-1.0.0.zip
+#   and the matching notes from CHANGELOG.md.
+# - Run it by hand (Actions › Release › Run workflow) → a test zip to
+#   download from the run page, nothing published.
+#
+# Signing: with the secrets TPT_CERT_P12 (the "TrackpadTool Dev" certificate
+# exported from Keychain Access as .p12, base64-encoded) and
+# TPT_CERT_PASSWORD, every version is signed with the same certificate, so
+# macOS keeps the Accessibility permission across updates. Without them the
+# app is signed ad hoc and the permission has to be given again per update.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      IDENTITY: TrackpadTool Dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version
+        id: version
+        run: |
+          VERSION=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' Resources/Info.plist)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "TrackpadTool $VERSION"
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$GITHUB_REF_NAME" != "v$VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME doesn't match the app's version $VERSION (Resources/Info.plist)"
+            exit 1
+          fi
+
+      - name: Signing certificate
+        id: cert
+        env:
+          CERT_P12: ${{ secrets.TPT_CERT_P12 }}
+          CERT_PASSWORD: ${{ secrets.TPT_CERT_PASSWORD }}
+        run: |
+          if [ -z "$CERT_P12" ]; then
+            echo "::warning::No signing certificate set up: the app is signed ad hoc."
+            echo "signed=no" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          KEYCHAIN="$RUNNER_TEMP/build.keychain-db"
+          KEYCHAIN_PASSWORD=$(uuidgen)
+          echo "$CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 3600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/cert.p12"
+          echo "signed=yes" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        run: bash ./build.sh
+
+      - name: Sign
+        run: |
+          if [ "${{ steps.cert.outputs.signed }}" = "yes" ]; then
+            # The certificate is self-made, so it isn't "trusted" here and
+            # build.sh signed ad hoc; sign again with it explicitly.
+            codesign --force --sign "$IDENTITY" --identifier com.sherrysideburns.TrackpadTool build/TrackpadTool.app
+          fi
+          codesign --verify --verbose=2 build/TrackpadTool.app
+          codesign -dv build/TrackpadTool.app 2>&1 | grep -E "Identifier|Authority|Signature" || true
+
+      - name: Check for personal details
+        run: |
+          # The app must not contain a home folder or anything personal from
+          # a developer's Mac (it is built here, in /Users/runner).
+          if strings -a build/TrackpadTool.app/Contents/MacOS/TrackpadTool \
+               | grep -i -E "sherrybakkebaard|/Users/[a-z0-9._-]+/" | grep -v "/Users/runner/"; then
+            echo "::error::The app contains a personal path"
+            exit 1
+          fi
+          echo "No personal details found."
+
+      - name: Zip
+        run: |
+          ditto -c -k --keepParent build/TrackpadTool.app "TrackpadTool-${{ steps.version.outputs.version }}.zip"
+          ls -l TrackpadTool-*.zip
+
+      - name: Release notes
+        if: github.ref_type == 'tag'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          awk -v v="$VERSION" '
+            $0 ~ "^## " v " " { on = 1; next }
+            on && /^## / { exit }
+            on { print }
+          ' CHANGELOG.md > changes.md
+          {
+            echo "## Install"
+            echo ""
+            echo "1. Download **TrackpadTool-$VERSION.zip** below, unzip it and drag **TrackpadTool** into your Applications folder."
+            echo "2. Open it. The first time, macOS blocks it: go to **System Settings › Privacy & Security**, scroll down and click **Open Anyway**."
+            echo "3. Allow **Accessibility** when the welcome window asks."
+            echo ""
+            echo "Updating? Quit TrackpadTool, replace the app in Applications and open it again."
+            echo ""
+            echo "## What's new in $VERSION"
+            echo ""
+            cat changes.md
+            echo ""
+            echo "Every version: [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)"
+          } > notes.md
+          cat notes.md
+
+      - name: Publish the release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          gh release create "$GITHUB_REF_NAME" "TrackpadTool-$VERSION.zip" \
+            --title "TrackpadTool $VERSION" --notes-file notes.md
+
+      - name: Keep the test zip
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: TrackpadTool-${{ steps.version.outputs.version }}-test
+          path: TrackpadTool-*.zip
+          retention-days: 14
+
+      - name: Remove the build keychain
+        if: always() && steps.cert.outputs.signed == 'yes'
+        run: security delete-keychain "$RUNNER_TEMP/build.keychain-db" || true
