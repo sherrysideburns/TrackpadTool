@@ -1,0 +1,27 @@
+name: Build
+
+# Compiles TrackpadTool on a GitHub Mac for every change, so build errors
+# show up here without building on your own Mac.
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["**.md"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show tools
+        run: swift --version && sw_vers
+      - name: Build
+        run: swift build -c release
+      - name: Version
+        run: echo "TrackpadTool $(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' Resources/Info.plist)"

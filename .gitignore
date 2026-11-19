@@ -1,0 +1,17 @@
+# Build output
+.build/
+build/
+build-log.txt
+*.zip
+
+# macOS
+.DS_Store
+
+# Personal data that must never be uploaded
+_to_delete/
+*.tpt
+settings*.json
+*.log
+*.p12
+*.pem
+*.cer
