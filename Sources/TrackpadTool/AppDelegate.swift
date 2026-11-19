@@ -1,9 +1,10 @@
 import AppKit
 import SwiftUI
 
-final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSPopoverDelegate {
     private var statusItem: NSStatusItem!
     private var settingsWindow: NSWindow?
+    private var welcomeWindow: NSWindow?
     private var retryTimer: Timer?
     private let popover = NSPopover()
     private let status = StatusWatcher.shared
@@ -21,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
         popover.behavior = .transient
         popover.animates = true
+        popover.delegate = self
         let panel = NSHostingController(
             rootView: MenuBarPanel(status: status, openSettings: { [weak self] in self?.openSettings() })
                 .environmentObject(SettingsStore.shared)
@@ -54,9 +56,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             wasTrusted = trusted
         }
 
-        if SettingsStore.shared.isFirstLaunch || !AX.isTrusted {
+        if SettingsStore.shared.isFirstLaunch {
+            showWelcome(firstLaunch: true)
+        } else if !AX.isTrusted {
             openSettings()
         }
+    }
+
+    /// The first-launch window: Accessibility, then how to start.
+    func showWelcome(firstLaunch: Bool = false) {
+        welcomeWindow?.close()
+        welcomeWindow = nil
+        do {
+            let view = WelcomeView(status: status, choosesSetup: firstLaunch) { [weak self] setup in
+                if let setup = setup {
+                    SettingsStore.shared.settings = setup.settings
+                    Log.info("First launch: started with \(setup.title)")
+                }
+                self?.welcomeWindow?.close()
+                self?.welcomeWindow = nil
+                if firstLaunch {
+                    NavigationModel.shared.pane = .gestures
+                    self?.openSettings()
+                }
+            }
+            let window = NSWindow(contentViewController: NSHostingController(rootView: view))
+            window.styleMask = [.titled, .closable, .fullSizeContentView]
+            window.titlebarAppearsTransparent = true
+            window.title = "Welcome to TrackpadTool"
+            window.isReleasedWhenClosed = false
+            window.delegate = self
+            window.center()
+            welcomeWindow = window
+        }
+        status.watch("welcome", true)
+        NSApp.activate(ignoringOtherApps: true)
+        welcomeWindow?.makeKeyAndOrderFront(nil)
     }
 
     /// Clicking the Dock icon opens the settings window.
@@ -110,6 +145,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         } else {
             Log.breadcrumb("Opened the menu bar dropdown")
             NSApp.activate(ignoringOtherApps: true)
+            status.watch("dropdown", true)
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
         }
@@ -134,13 +170,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             window.delegate = self
             settingsWindow = window
         }
+        status.watch("settings", true)
         NSApp.activate(ignoringOtherApps: true)
         settingsWindow?.makeKeyAndOrderFront(nil)
         settingsWindow?.orderFrontRegardless()
     }
 
     func windowWillClose(_ notification: Notification) {
+        if let window = notification.object as? NSWindow {
+            if window === settingsWindow { status.watch("settings", false) }
+            if window === welcomeWindow { status.watch("welcome", false) }
+        }
         DispatchQueue.main.async { self.applyDockPolicy() }
+    }
+
+    func popoverDidClose(_ notification: Notification) {
+        status.watch("dropdown", false)
     }
 
     @objc func toggleGestures() {

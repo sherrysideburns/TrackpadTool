@@ -44,17 +44,30 @@ final class StatusWatcher: ObservableObject {
     @Published var listening = GestureEngine.shared.isListening
     @Published var stageManagerOn = StageManager.isOn
     private var timer: Timer?
+    /// Windows that show this status right now; the check only runs while
+    /// one is open, so TrackpadTool doesn't wake the Mac for nothing.
+    private var viewers = Set<String>()
 
-    private init() {
-        // Only publish real changes: every publish redraws every open page,
-        // and would close a menu you have open.
-        timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            let trusted = AX.isTrusted, listening = GestureEngine.shared.isListening, stage = StageManager.isOn
-            if self.accessibilityTrusted != trusted { self.accessibilityTrusted = trusted }
-            if self.listening != listening { self.listening = listening }
-            if self.stageManagerOn != stage { self.stageManagerOn = stage }
+    private init() {}
+
+    func watch(_ viewer: String, _ on: Bool) {
+        if on { viewers.insert(viewer) } else { viewers.remove(viewer) }
+        if viewers.isEmpty {
+            timer?.invalidate()
+            timer = nil
+        } else if timer == nil {
+            refresh()
+            timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in self?.refresh() }
         }
+    }
+
+    /// Only publishes real changes: every publish redraws every open page,
+    /// and would close a menu you have open.
+    private func refresh() {
+        let trusted = AX.isTrusted, listening = GestureEngine.shared.isListening, stage = StageManager.isOn
+        if accessibilityTrusted != trusted { accessibilityTrusted = trusted }
+        if self.listening != listening { self.listening = listening }
+        if stageManagerOn != stage { stageManagerOn = stage }
     }
 
     deinit { timer?.invalidate() }
@@ -668,7 +681,13 @@ struct GeneralPane: View {
                 Section {
                     LabeledContent("Version", value: AppInfo.version)
                     LabeledContent("Developer", value: "SherrySideBurns")
+                    LabeledContent("Source code and updates") {
+                        Link("GitHub", destination: AppInfo.website)
+                    }
+                    Button("Show welcome screen again") { (NSApp.delegate as? AppDelegate)?.showWelcome() }
                     Button("Quit TrackpadTool") { NSApp.terminate(nil) }
+                } header: {
+                    Text("About")
                 }
             }
             .formStyle(.grouped)
@@ -713,25 +732,28 @@ struct GestureSettingsSections: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
 
-                Section {
-                    if store.isOn(.forcePress) {
-                        HStack {
-                            Picker("Force needed", selection: $store.settings.forceStrength) {
-                                ForEach(ForceStrength.allCases.filter { $0 != .matchMac || store.settings.forceCalibration != nil }) { s in
-                                    Text(s.title).tag(s)
+                // Force press is an Advanced feature; its settings show when it's in use.
+                if store.settings.advancedMode || store.showsGroup(.forcePress) {
+                    Section {
+                        if store.isOn(.forcePress) {
+                            HStack {
+                                Picker("Force needed", selection: $store.settings.forceStrength) {
+                                    ForEach(ForceStrength.allCases.filter { $0 != .matchMac || store.settings.forceCalibration != nil }) { s in
+                                        Text(s.title).tag(s)
+                                    }
                                 }
+                                .pickerStyle(.segmented)
+                                Button("Calibrate…") { nav.calibratingForce = true }
                             }
-                            .pickerStyle(.segmented)
-                            Button("Calibrate…") { nav.calibratingForce = true }
+                        } else {
+                            moduleOff("Force press")
                         }
-                    } else {
-                        moduleOff("Force press")
+                    } header: {
+                        Text("Force press")
+                    } footer: {
+                        Text("Calibrate once (force click a pad three times) so the action happens together with your Mac’s force-click buzz: that’s “Match macOS”. Light, Medium and Firm instead use how much harder than a normal click you press. Set “Look up & data detectors” to “Tap with three fingers” or Off in Trackpad settings, or Look Up may pop up as well.")
+                            .font(.caption).foregroundStyle(.secondary)
                     }
-                } header: {
-                    Text("Force press")
-                } footer: {
-                    Text("Calibrate once (force click a pad three times) so the action happens together with your Mac’s force-click buzz: that’s “Match macOS”. Light, Medium and Firm instead use how much harder than a normal click you press. Set “Look up & data detectors” to “Tap with three fingers” or Off in Trackpad settings, or Look Up may pop up as well.")
-                        .font(.caption).foregroundStyle(.secondary)
                 }
 
                 Section {

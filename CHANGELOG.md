@@ -3,6 +3,16 @@
 All notable changes to TrackpadTool, newest first.
 Versions follow [semantic versioning](https://semver.org) from 1.0.0 on: 1.0.1 is a fix, 1.1.0 adds features.
 
+## 0.12 — 2026-11-19
+- **Welcome:** a welcome window on first launch explains what TrackpadTool does, walks you through the Accessibility permission, and lets you choose the Windows-style setup or start empty. Settings › General › About can show it again (without touching your setup).
+- **Advanced mode:** Middle click is now a normal module and action; Force press (gestures, module and its settings on General) moved to Advanced mode. A force press you already use keeps working and stays visible.
+- **About:** new About section on General with version, developer, a link to GitHub, the welcome screen and Quit.
+- **Privacy:** the error log no longer records every gesture and force press; what you do is only kept in memory and appears in a crash or freeze note. Only errors, crashes and freezes are written to the file.
+- **App ID:** TrackpadTool's ID is now `com.sherrysideburns.TrackpadTool` (and its `.tpt` file type ID too). After updating, allow Accessibility once more, and switch Open at login on again if you use it. Settings, combos and old `.tpt` files are unaffected.
+- **Energy:** the status checks (Accessibility, Stage Manager) only run while a TrackpadTool window or the dropdown is open.
+- **Combos:** using a combo that was placed straight into the Imported folder now also lists what to check first (apps it opens, keys it presses).
+- **README:** rewritten for people installing the app: features, install steps, privacy, building it yourself.
+
 ## 0.11.2 — 2026-11-19
 - **Screenshots, Spotlight, Spaces:** these actions use your own shortcut from System Settings › Keyboard › Keyboard Shortcuts (for example a changed “Copy area to clipboard”), not always the standard one. A switched-off screenshot shortcut is taken directly instead; for Spotlight and Spaces a note says it's switched off.
 - **Force Quit, Spotlight:** ⌘, ⌥, ⌃ and ⇧ are now pressed as real keys around these shortcuts, because macOS checks that they're held down.

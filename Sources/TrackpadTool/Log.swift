@@ -52,7 +52,7 @@ enum Log {
     private static var fd: Int32 = -1
     private static let lock = NSLock()
     private static var crumbs: [String] = []
-    private static let osLog = OSLog(subsystem: "com.local.TrackpadTool", category: "app")
+    private static let osLog = OSLog(subsystem: "com.sherrysideburns.TrackpadTool", category: "app")
 
     // MARK: Start and stop
 
@@ -122,7 +122,8 @@ enum Log {
         _ = text.withCString { strncpy(crashActivity, $0, crashActivitySize - 1) }
         crashActivity[crashActivitySize - 1] = 0
         lock.unlock()
-        write("INFO", message)
+        // Kept in memory only: what you do isn't written to the log file. It
+        // only shows up in a crash or freeze note, to explain what happened.
         updateMarker(message)
     }
 

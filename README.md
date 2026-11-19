@@ -1,73 +1,61 @@
 # TrackpadTool
 
-A menu bar app that lets you choose what trackpad gestures do, with Windows-style window control.
+A menu bar app for macOS that lets you choose what your trackpad gestures do: snap and switch windows like on Windows, switch tabs, copy and paste, take screenshots, open Mission Control and more. Keyboard shortcuts can run the same actions.
 
-## Build and run
+By SherrySideBurns. Every change is listed in [CHANGELOG.md](CHANGELOG.md).
 
-In Terminal:
+## What it can do
+
+- **Gestures:** three- and four-finger swipes and clicks, TipTap (rest one finger, tap another beside it), swipes in from the edge, clicks in a trackpad corner, and force press (Advanced mode).
+- **Actions:** hide and restore all apps, a ⌘Tab-style app switcher, minimize, window snapping (halves, quarters, thirds, maximize, next display), tabs, Stage Manager, editing (copy, paste, undo, find…), media keys, screenshots, Mission Control, App Exposé, Show Desktop, Spaces, Spotlight, middle click, a keyboard shortcut of your choice or opening an app.
+- **Per app:** give a gesture a different action in one app (Advanced mode).
+- **Keyboard shortcuts:** run any action from anywhere, including Rectangle's window shortcuts with one click (Advanced mode).
+- **Combos:** save your setup, or parts of it, as a `.tpt` file to share. Imported files are always shown for review before anything changes.
+
+Simple by default: rarely used options only appear after switching on **Advanced mode** in Settings › General.
+
+## Install
+
+TrackpadTool needs macOS 13 Ventura or newer and a trackpad.
+
+1. Download `TrackpadTool.zip` from the latest release, unzip it and drag **TrackpadTool** into your Applications folder.
+2. Open it. The first time, macOS blocks it because it isn't from an Apple-verified developer. Go to **System Settings › Privacy & Security**, scroll down and click **Open Anyway**.
+3. The welcome window asks you to allow **Accessibility** (System Settings › Privacy & Security › Accessibility). TrackpadTool needs this to move windows, press shortcuts for you and notice clicks.
+4. Choose how to start: the Windows-style setup, or empty to pick everything yourself.
+5. If macOS uses the same gestures, both react. The Gestures page tells you which ones to switch off in System Settings › Trackpad.
+
+## Privacy
+
+TrackpadTool works entirely on your Mac and sends nothing anywhere. It reads finger positions on the trackpad, not what you type or what's on screen. Its error log (`~/Library/Logs/TrackpadTool`) only records errors, crashes and freezes, and stays on your Mac unless you share it.
+
+## Build it yourself
+
+You need Apple's free Command Line Tools (`xcode-select --install`). Full Xcode isn't needed.
 
 ```
+git clone https://github.com/sherrysideburns/TrackpadTool.git
 cd TrackpadTool
 ./build.sh --run
 ```
 
-This needs Apple's free Command Line Tools (`xcode-select --install` if the script asks). The app is built at `build/TrackpadTool.app`. You can move it to Applications.
+The app is built at `build/TrackpadTool.app`. Optional: double-click `setup-signing.command` once to create a local signing certificate, so macOS keeps the Accessibility permission across rebuilds.
 
-## First launch
-
-1. Allow **Accessibility** when asked (System Settings › Privacy & Security › Accessibility).
-2. Turn off the macOS gestures that clash (the Gestures page tells you which):
-   - System Settings › Trackpad › More Gestures: set "Mission Control", "App Exposé" and "Swipe between full-screen applications" to four fingers or off.
-   - If three-finger drag is on (Accessibility › Pointer Control › Trackpad Options), turn it off.
-
-## Starting setup
-
-| Gesture | Action |
-|---|---|
-| 3 fingers down | Hide all apps (⌘H in every app at once) |
-| 3 fingers up | Restore the hidden apps |
-| 3 fingers left / right | Window switcher: keep fingers down and swipe to move, lift to switch |
-| Force press | Untouched (Look Up keeps working) |
-
-Stage Manager (four fingers, added only where those swipes were still free):
-
-| Gesture | Action |
-|---|---|
-| 4 fingers left / right | Stage switcher: one tile per app/stage, lift to switch |
-| 4 fingers up | Turn Stage Manager on/off |
-| 4 fingers down | Show/hide the recent apps strip |
-
-More gesture types (each a module you can switch off):
-
-| Gesture | Starts as |
-|---|---|
-| TipTap left / right (rest one finger, tap another beside it) | Previous / next tab |
-| Two-finger swipe in from an edge | macOS default |
-| One-finger click in a corner | macOS default |
-| Force press | macOS default (Look Up) |
-
-Per-app gestures: on the Gestures page, pick an app under "Gestures for" to give gestures a different action there.
-
-Every change is listed in [CHANGELOG.md](CHANGELOG.md).
-
-## How it's organized
+## How the code is organized
 
 - `Models.swift`: gestures, modules, actions, settings
 - `SettingsStore.swift`: saves settings to `~/Library/Application Support/TrackpadTool/settings.json`
 - `Multitouch.swift`: reads fingers from the trackpad (private MultitouchSupport framework)
 - `GestureRecognizer.swift`: turns finger movement into swipes, TipTaps and edge swipes
-- `GestureEngine.swift`: connects gestures to actions (per app); watches clicks, corner clicks and force press
-- `ActionRunner.swift`: hide/restore, minimize, tabs, shortcuts, open app, middle click
-- `WindowSnapper.swift`: window snapping (halves, quarters, maximize, center, restore, next display)
-- `WindowSwitcher.swift`: the Alt+Tab-style popup
-- `SettingsView.swift`: the settings window (Gestures, Modules, Permissions, General)
-- `GlassStyle.swift`: the small confirmation bubble (e.g. "Stage Manager on")
-- `StageManager.swift`: turns Stage Manager and its recent apps strip on/off
-- `tools/make_icon.py`: renders `Resources/AppIcon.icns` (needs Python with Pillow and NumPy)
+- `GestureEngine.swift`: connects gestures to actions; watches clicks, corner clicks, force press and scrolling
+- `ActionRunner.swift`: runs actions (keys, media keys, Dock features, screenshots)
+- `WindowSnapper.swift`, `WindowSwitcher.swift`: window snapping and the app switcher
+- `HotKeys.swift`, `ShortcutsPane.swift`: global keyboard shortcuts
+- `Profiles.swift`, `Combos.swift`, `ProfilesView.swift`: combos (.tpt files)
+- `SettingsView.swift`, `MenuBarPanel.swift`, `Welcome.swift`: the settings window, the menu bar dropdown and the first-launch window
+- `Log.swift`: error log, crash and freeze notes
 
-To add a module: add a case to `ModuleID`, its actions to `ActionKind` (with `module` pointing at it), and handle them in `ActionRunner.run`.
+Every change on GitHub is compiled automatically (see the Actions tab).
 
-## Good to know
+## Licence
 
-- After rebuilding, macOS may treat the app as new. If gestures stop working, remove TrackpadTool from the Accessibility list and add it again.
-- The app reads the trackpad only while at least one gesture is set to something other than "macOS default".
+All rights reserved. You may look at the code; please ask before reusing it.

@@ -199,7 +199,11 @@ struct ProfilesPane: View {
         let parts = file.orderedParts
         let alert = NSAlert()
         alert.messageText = "Use “\(file.name)”?"
-        alert.informativeText = "This replaces: \(parts.map(\.title).joined(separator: ", ")).\n\nYour current setup is backed up first, so you can undo it."
+        // Files placed straight into the Imported folder never went through
+        // the import review, so the things worth checking are listed here too.
+        let flags = manager.flags(in: file)
+        let check = flags.isEmpty ? "" : "\n\nCheck these first:\n• " + flags.joined(separator: "\n• ")
+        alert.informativeText = "This replaces: \(parts.map(\.title).joined(separator: ", ")).\n\nYour current setup is backed up first, so you can undo it.\(check)"
         let box = NSButton(checkboxWithTitle: "Reset everything else to macOS default", target: nil, action: nil)
         box.state = .off
         alert.accessoryView = box

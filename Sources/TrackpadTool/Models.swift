@@ -46,7 +46,7 @@ enum GestureGroup: String, CaseIterable, Identifiable {
     var gestures: [Gesture] { Gesture.allCases.filter { $0.group == self } }
 
     /// Only shown in Advanced mode, unless one of its gestures is in use.
-    var isAdvanced: Bool { self == .edgeSwipes }
+    var isAdvanced: Bool { self == .edgeSwipes || self == .forcePress }
 }
 
 // MARK: - Trackpad corners
@@ -346,7 +346,7 @@ enum ModuleID: String, Codable, CaseIterable, Identifiable {
     /// Hidden on the Modules page unless Advanced mode is on.
     var isAdvanced: Bool {
         switch self {
-        case .middleClick, .edgeSwipes, .perAppGestures, .shortcutsAndApps: return true
+        case .forcePress, .edgeSwipes, .perAppGestures, .shortcutsAndApps: return true
         default: return false
         }
     }
@@ -563,7 +563,7 @@ enum ActionKind: String, Codable, CaseIterable, Identifiable {
     var isAdvanced: Bool {
         switch self {
         case .newTab, .closeTab, .reopenTab, .previousStage,
-             .keyboardShortcut, .openApp, .forceQuit, .middleClick,
+             .keyboardShortcut, .openApp, .forceQuit,
              .cut, .undo, .redo, .pasteWithoutFormatting, .selectAll, .nextTrack, .previousTrack,
              .findNext, .newDocument, .deleteWord, .lineStart, .lineEnd, .documentStart, .documentEnd,
              .screenshotScreenToClipboard, .lockScreen:
@@ -686,6 +686,8 @@ enum AppInfo {
     static var version: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev"
     }
+
+    static let website = URL(string: "https://github.com/sherrysideburns/TrackpadTool")!
 }
 
 struct Settings: Codable, Equatable {
@@ -732,6 +734,13 @@ struct Settings: Codable, Equatable {
         s.bindings[Gesture.threeSwipeRight.key] = ActionConfig(kind: .windowSwitcher)
         s.addStageManagerDefaults()
         s.addTipTapDefaults()
+        return s
+    }
+
+    /// Every gesture left to macOS; the usual modules on, so actions can be picked.
+    static var empty: Settings {
+        var s = Settings()
+        for m in ModuleID.allCases { s.modules[m.rawValue] = m.defaultOn }
         return s
     }
 

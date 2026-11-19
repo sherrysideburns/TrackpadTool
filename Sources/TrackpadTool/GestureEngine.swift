@@ -296,7 +296,6 @@ final class ClickTap {
     private var sizeBaseline: Float = 0
     private var sizePeak: Float = 0
     // Main thread only:
-    private var pressuresLogged = 0
     private var reportedNoPressure = false
 
     /// Marks events we re-send, so the watcher lets them through.
@@ -414,13 +413,12 @@ final class ClickTap {
         }
     }
 
-    /// The click ended; notes the readings for the first clicks of a session
-    /// so the force threshold can be checked in the log.
+    /// The click ended; warns once if this trackpad gives no pressure readings.
     private func endForceWatch(log: Bool) {
         forceLock.lock()
         let was = forceWatching
         forceWatching = false
-        let base = forceBaseline, peak = forcePeak, limit = forceLimit, s0 = sizeBaseline, s1 = sizePeak
+        let base = forceBaseline, peak = forcePeak
         forceLock.unlock()
         guard was, log else { return }
         if base <= 0 && peak <= 0 {
@@ -429,11 +427,6 @@ final class ClickTap {
                 Log.warn("Force press: this trackpad gives no pressure readings")
             }
             return
-        }
-        if pressuresLogged < 30 {
-            pressuresLogged += 1
-            Log.info(String(format: "Force press: click pressure %.0f → peak %.0f (needs %.0f) · size %.2f → %.2f",
-                            base, peak, limit, s0, s1))
         }
     }
 

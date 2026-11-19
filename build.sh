@@ -27,9 +27,9 @@ touch "$APP"   # so the Dock picks up the new icon
 # across rebuilds); otherwise sign ad-hoc.
 IDENTITY="TrackpadTool Dev"
 if security find-identity -v -p codesigning 2>/dev/null | grep -q "$IDENTITY"; then
-    codesign --force --sign "$IDENTITY" --identifier com.local.TrackpadTool "$APP"
+    codesign --force --sign "$IDENTITY" --identifier com.sherrysideburns.TrackpadTool "$APP"
 else
-    codesign --force --sign - --identifier com.local.TrackpadTool "$APP"
+    codesign --force --sign - --identifier com.sherrysideburns.TrackpadTool "$APP"
 fi
 
 echo "Built $APP"
