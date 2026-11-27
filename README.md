@@ -18,7 +18,7 @@ Simple by default: rarely used options only appear after switching on **Advanced
 
 TrackpadTool needs macOS 13 Ventura or newer and a trackpad.
 
-1. Download `TrackpadTool.zip` from the latest release, unzip it and drag **TrackpadTool** into your Applications folder.
+1. Download `TrackpadTool-<version>.zip` from the [latest release](https://github.com/sherrysideburns/TrackpadTool/releases/latest), unzip it and drag **TrackpadTool** into your Applications folder.
 2. Open it. The first time, macOS blocks it because it isn't from an Apple-verified developer. Go to **System Settings › Privacy & Security**, scroll down and click **Open Anyway**.
 3. The welcome window asks you to allow **Accessibility** (System Settings › Privacy & Security › Accessibility). TrackpadTool needs this to move windows, press shortcuts for you and notice clicks.
 4. Choose how to start: the Windows-style setup, or empty to pick everything yourself.
