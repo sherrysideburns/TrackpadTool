@@ -5,8 +5,10 @@ name: Release
 #
 # - Push a tag like v1.0.0  → a GitHub Release with TrackpadTool-1.0.0.zip
 #   and the matching notes from CHANGELOG.md.
-# - Run it by hand (Actions › Release › Run workflow) → a test zip to
-#   download from the run page, nothing published.
+# - Run it by hand (Actions › Release › Run workflow):
+#     · "Publish this version" ticked → creates the tag vX.Y.Z (from the
+#       version in Resources/Info.plist) and publishes the GitHub Release;
+#     · not ticked → a test zip to download from the run page, nothing published.
 #
 # Signing: with the secrets TPT_CERT_P12 (the "TrackpadTool Dev" certificate
 # exported from Keychain Access as .p12, base64-encoded) and
@@ -18,6 +20,11 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish this version as a GitHub Release"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -33,9 +40,20 @@ jobs:
 
       - name: Version
         id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           VERSION=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' Resources/Info.plist)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF_TYPE" = "tag" ] || [ "${{ inputs.publish }}" = "true" ]; then
+            echo "publish=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=no" >> "$GITHUB_OUTPUT"
+          fi
+          if [ "${{ inputs.publish }}" = "true" ] && gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "::error::Release v$VERSION already exists. Raise the version in Resources/Info.plist first."
+            exit 1
+          fi
           echo "TrackpadTool $VERSION"
           if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$GITHUB_REF_NAME" != "v$VERSION" ]; then
             echo "::error::Tag $GITHUB_REF_NAME doesn't match the app's version $VERSION (Resources/Info.plist)"
@@ -95,7 +113,7 @@ jobs:
           ls -l TrackpadTool-*.zip
 
       - name: Release notes
-        if: github.ref_type == 'tag'
+        if: steps.version.outputs.publish == 'yes'
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           awk -v v="$VERSION" '
@@ -121,16 +139,18 @@ jobs:
           cat notes.md
 
       - name: Publish the release
-        if: github.ref_type == 'tag'
+        if: steps.version.outputs.publish == 'yes'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          gh release create "$GITHUB_REF_NAME" "TrackpadTool-$VERSION.zip" \
+          # From a tag push the tag exists; from "Run workflow" it's created
+          # here, on the commit that was just built.
+          gh release create "v$VERSION" "TrackpadTool-$VERSION.zip" --target "$GITHUB_SHA" \
             --title "TrackpadTool $VERSION" --notes-file notes.md
 
       - name: Keep the test zip
-        if: github.ref_type != 'tag'
+        if: steps.version.outputs.publish != 'yes'
         uses: actions/upload-artifact@v4
         with:
           name: TrackpadTool-${{ steps.version.outputs.version }}-test
